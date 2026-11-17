@@ -62,6 +62,10 @@ main{max-width:900px;margin:0 auto;padding:12px 16px 110px}
 .tep button{border:0;background:none;color:var(--do);cursor:pointer}
 .khoa{max-width:340px;margin:12vh auto;background:#fff;border-radius:16px;padding:24px;text-align:center}
 .khoa input{width:100%;font-size:24px;text-align:center;letter-spacing:6px;border:1px solid var(--vien);border-radius:10px;padding:10px;margin:14px 0}
+.khoa input.oChu{font-size:16px;letter-spacing:0;margin:14px 0 4px}
+#oTen{margin-top:0}
+header .toi{font-size:12px;font-weight:400;opacity:.85;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+.vet{font-size:12px;color:var(--mo);margin:-4px 0 12px;line-height:1.6}
 .thongbao{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#0f172a;color:#fff;padding:10px 16px;border-radius:10px;z-index:20;display:none;max-width:90vw}
 .loi{color:var(--do);font-size:14px;min-height:18px}
 .chonTep{border:2px dashed var(--vien);border-radius:12px;padding:14px;text-align:center;color:var(--mo);cursor:pointer;display:block}
@@ -73,16 +77,34 @@ main{max-width:900px;margin:0 auto;padding:12px 16px 110px}
   <div class="khoa">
     <div style="font-size:42px">📁</div>
     <h2 style="margin:6px 0">Thư ký hồ sơ AMIKA</h2>
-    <div style="color:var(--mo)">Nhập mã mở khoá 6 số</div>
-    <input id="oMa" inputmode="numeric" maxlength="6" autocomplete="off">
-    <div class="loi" id="loiMa"></div>
-    <button class="nut chinh" style="width:100%" onclick="moKhoa()">Mở</button>
+    <div id="buocEmail">
+      <div style="color:var(--mo)">Đăng nhập bằng email công ty đã đăng ký</div>
+      <input id="oEmail" type="email" inputmode="email" autocomplete="email" placeholder="ten@gmail.com" class="oChu">
+      <div class="loi" id="loiEmail"></div>
+      <button class="nut chinh" style="width:100%" id="nutGui" onclick="guiMa()">Gửi mã vào email</button>
+    </div>
+    <div id="buocMa" style="display:none">
+      <div style="color:var(--mo)">Mở hộp thư <b id="emailDaGui"></b>, nhập mã 6 số vừa nhận<br><small>(không thấy thì xem thư mục Spam / Quảng cáo)</small></div>
+      <input id="oOtp" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+      <input id="oTen" placeholder="Họ tên của bạn (ghi 1 lần)" class="oChu" style="display:none">
+      <div class="loi" id="loiOtp"></div>
+      <button class="nut chinh" style="width:100%" id="nutVao" onclick="xacNhan()">Vào phần mềm</button>
+      <div style="margin-top:10px;font-size:13px"><a href="#" onclick="guiMa(true);return false">Gửi lại mã</a> · <a href="#" onclick="veBuoc('email');return false">Đổi email</a></div>
+    </div>
+    <div id="buocQT" style="display:none">
+      <div style="color:var(--mo)">Mã quản trị 6 số</div>
+      <input id="oMa" inputmode="numeric" maxlength="6" autocomplete="off">
+      <div class="loi" id="loiMa"></div>
+      <button class="nut chinh" style="width:100%" onclick="moKhoa()">Mở</button>
+      <div style="margin-top:10px;font-size:13px"><a href="#" onclick="veBuoc('email');return false">Đăng nhập bằng email</a></div>
+    </div>
+    <div style="margin-top:16px;font-size:12px" id="linkQT"><a href="#" style="color:var(--mo)" onclick="veBuoc('qt');return false">Anh Huy: mở bằng mã quản trị</a></div>
   </div>
 </div>
 
 <div id="manChinh" style="display:none">
 <header>
-  <h1>📁 Thư ký hồ sơ AMIKA</h1>
+  <h1>📁 Thư ký hồ sơ AMIKA <span class="toi" id="toi"></span></h1>
   <div class="hang">
     <input id="oTim" type="search" placeholder="Tìm số, tên công ty, nội dung, người…" oninput="ve()">
     <select id="oNam" onchange="ve()"></select>
@@ -106,13 +128,16 @@ main{max-width:900px;margin:0 auto;padding:12px 16px 110px}
 const API = "https://script.google.com/macros/s/AKfycbw7guiwEzCEx3DZOP6omyvIFmQSmpzyJd4edfcdA3cnNbHuk84lhDJ09oqgDHtOKMk/exec";
 const THU = !/^https:\/\//.test(API);
 const LS={get(k,f){try{const v=localStorage.getItem("tk_"+k);return v?JSON.parse(v):f}catch(e){return f}},set(k,v){try{if(v==null)localStorage.removeItem("tk_"+k);else localStorage.setItem("tk_"+k,JSON.stringify(v))}catch(e){}}};
-let MA = LS.get("ma", ""), D = null, LOC = { loai: "" , han: false };
+let MA = LS.get("ma", ""), D = null, LOC = { loai: "" , han: false, toi: false };
 
-function goi(fn, ...args) {
+function goiMay(fn, args) {
   if (THU) return giaLap(fn, args);
   return fetch(API, { method: "POST", redirect: "follow", credentials: "omit", headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ fn, args: [MA].concat(args) }) })
+    body: JSON.stringify({ fn, args }) })
     .then(r => r.json()).then(r => { if (!r.ok) throw new Error(r.loi); return r.data; });
+}
+function goi(fn, ...args) {
+  return goiMay(fn, [MA].concat(args)).catch(e => { if (e.message === "HET_QUYEN" || (e.message === "SAI_MA" && fn !== "taiDuLieu")) dangXuat(e.message === "HET_QUYEN" ? "Tài khoản này đã bị tắt quyền dùng. Liên hệ anh Huy." : "Phiên đăng nhập hết hạn, đăng nhập lại giúp em."); throw e; });
 }
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -123,19 +148,56 @@ function homNay() { const d = new Date(Date.now() + 7 * 36e5); return d.toISOStr
 function conNgay(s) { return Math.round((new Date(s + "T00:00:00Z") - new Date(homNay() + "T00:00:00Z")) / 864e5); }
 function loaiCua(ma) { return (D.loai.find(l => l.ma === ma) || { ten: ma, mau: "{so}/{nam}" }); }
 
-/* ---------- mở khoá ---------- */
-function hienKhoa(loi) { $("manChinh").style.display = "none"; $("manKhoa").style.display = "block"; $("loiMa").textContent = loi || ""; setTimeout(() => $("oMa").focus(), 50); }
+/* ---------- đăng nhập ---------- */
+function veBuoc(b) {
+  $("buocEmail").style.display = b === "email" ? "" : "none"; $("buocMa").style.display = b === "ma" ? "" : "none";
+  $("buocQT").style.display = b === "qt" ? "" : "none"; $("linkQT").style.display = b === "qt" ? "none" : "";
+  setTimeout(() => ({ email: $("oEmail"), ma: $("oOtp"), qt: $("oMa") })[b].focus(), 50);
+}
+function hienKhoa(loi) {
+  $("manChinh").style.display = "none"; $("manKhoa").style.display = "block";
+  $("oEmail").value = $("oEmail").value || LS.get("email", "");
+  veBuoc("email"); $("loiEmail").textContent = loi || ""; $("loiMa").textContent = "";
+}
+function dangXuat(loi) { MA = ""; D = null; LS.set("ma", null); LS.set("dl", null); hienKhoa(loi); }
 $("oMa").addEventListener("keydown", e => { if (e.key === "Enter") moKhoa(); });
+$("oEmail").addEventListener("keydown", e => { if (e.key === "Enter") guiMa(); });
+$("oOtp").addEventListener("keydown", e => { if (e.key === "Enter") xacNhan(); });
+$("oTen").addEventListener("keydown", e => { if (e.key === "Enter") xacNhan(); });
 function moKhoa() { MA = $("oMa").value.trim(); taiLai(true); }
+function guiMa(lai) {
+  const email = $("oEmail").value.trim().toLowerCase(), loi = lai ? $("loiOtp") : $("loiEmail");
+  if (!/^\S+@\S+\.\S+$/.test(email)) { loi.textContent = "Email chưa đúng."; return; }
+  const nut = $("nutGui"); nut.disabled = true; nut.textContent = "Đang gửi mã…"; loi.textContent = "";
+  goiMay("guiMaEmail", [email]).then(r => {
+    LS.set("email", email); $("emailDaGui").textContent = email; $("oOtp").value = ""; $("oTen").value = "";
+    $("oTen").style.display = r.canTen ? "" : "none"; veBuoc("ma"); if (lai) bao("Đã gửi mã mới");
+  }).catch(e => { loi.textContent = e.message; }).finally(() => { nut.disabled = false; nut.textContent = "Gửi mã vào email"; });
+}
+function xacNhan() {
+  const ma = $("oOtp").value.trim(), ten = $("oTen").value.trim();
+  if (!/^\d{6}$/.test(ma)) { $("loiOtp").textContent = "Mã gồm 6 chữ số."; return; }
+  if ($("oTen").style.display !== "none" && !ten) { $("loiOtp").textContent = "Ghi họ tên để mọi người biết ai tạo hồ sơ."; return; }
+  const nut = $("nutVao"); nut.disabled = true; nut.textContent = "Đang vào…"; $("loiOtp").textContent = "";
+  goiMay("xacNhanMa", [$("emailDaGui").textContent, ma, ten]).then(r => { MA = r.ve; return taiLai(true); })
+    .catch(e => { $("loiOtp").textContent = e.message === "HET_QUYEN" ? "Email này đã bị tắt quyền dùng." : e.message; })
+    .finally(() => { nut.disabled = false; nut.textContent = "Vào phần mềm"; });
+}
+const TOI = () => (D && D.toi) || { email: "", ten: "", vaiTro: "Quản trị" };
+const laQT = () => TOI().vaiTro === "Quản trị";
+const cuaToi = email => !!(email && TOI().email && email === TOI().email);
+function gioVN(ms) { return ms > 1e12 ? new Date(ms).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" }) : ""; }
 function taiLai(tuKhoa) {
   const cache = LS.get("dl", null);
   if (cache && !tuKhoa && !D) { D = cache; hienChinh(); }
   return goi("taiDuLieu").then(d => { D = d; LS.set("ma", MA); LS.set("dl", d); hienChinh(); })
-    .catch(e => { if (e.message === "SAI_MA") { LS.set("ma", null); LS.set("dl", null); MA = ""; hienKhoa(tuKhoa ? "Sai mã, anh thử lại." : ""); }
+    .catch(e => { if (e.message === "SAI_MA" || e.message === "HET_QUYEN") { const qt = $("buocQT").style.display !== "none" && tuKhoa;
+        dangXuat(e.message === "HET_QUYEN" ? "Tài khoản này đã bị tắt quyền dùng. Liên hệ anh Huy." : ""); if (qt) { veBuoc("qt"); $("loiMa").textContent = "Sai mã, anh thử lại."; } }
       else if (D) bao("Chưa tải được dữ liệu mới: " + e.message, 4000); else hienKhoa(e.message); });
 }
 function hienChinh() {
   $("manKhoa").style.display = "none"; $("manChinh").style.display = "block";
+  $("toi").textContent = D.toi ? "👤 " + (D.toi.ten || D.toi.email) : "";
   const nam = new Set(D.ds.map(v => v.nam)); nam.add(homNay().slice(0, 4));
   const cu = $("oNam").value;
   $("oNam").innerHTML = '<option value="">Mọi năm</option>' + [...nam].sort().reverse().map(n => `<option>${n}</option>`).join("");
@@ -150,28 +212,32 @@ function ve() {
   const nam = $("oNam").value, tim = boDau($("oTim").value.trim());
   let ds = D.ds.filter(v => !nam || v.nam === nam);
   const dem = {}; ds.forEach(v => dem[v.loai] = (dem[v.loai] || 0) + 1);
-  $("chips").innerHTML = `<span class="chip ${!LOC.loai && !LOC.han ? "on" : ""}" onclick="chonLoai('')">Tất cả<b>${ds.length}</b></span>` +
+  const soCuaToi = ds.filter(v => cuaToi(v.emailTao)).length;
+  $("chips").innerHTML = `<span class="chip ${!LOC.loai && !LOC.han && !LOC.toi ? "on" : ""}" onclick="chonLoai('')">Tất cả<b>${ds.length}</b></span>` +
+    (TOI().email ? `<span class="chip ${LOC.toi ? "on" : ""}" onclick="LOC.toi=!LOC.toi;LOC.han=false;ve()">👤 Tôi tạo<b>${soCuaToi}</b></span>` : "") +
     D.loai.filter(l => l.dangDung || dem[l.ma]).map(l => `<span class="chip ${LOC.loai === l.ma ? "on" : ""}" onclick="chonLoai('${l.ma}')">${esc(l.ten)}<b>${dem[l.ma] || 0}</b></span>`).join("");
   const sapHan = D.ds.filter(v => v.hetHan && v.tinhTrang !== "Đã huỷ" && v.tinhTrang !== "Hết hiệu lực" && conNgay(v.hetHan) <= (D.nhacTruoc || 30));
   $("baoHan").innerHTML = sapHan.length ? `<div class="bao" onclick="LOC.han=!LOC.han;LOC.loai='';ve()">⏰ <b>${sapHan.length}</b> văn bản sắp hết hạn / quá hạn — ${LOC.han ? "bấm để xem tất cả" : "bấm để xem"}</div>` : "";
   if (LOC.han) ds = sapHan.slice().sort((a, b) => a.hetHan < b.hetHan ? -1 : 1);
   else {
     if (LOC.loai) ds = ds.filter(v => v.loai === LOC.loai);
+    if (LOC.toi) ds = ds.filter(v => cuaToi(v.emailTao));
     ds.sort((a, b) => (b.ngay + String(b.so).padStart(5, "0")).localeCompare(a.ngay + String(a.so).padStart(5, "0")) || b.taoLuc - a.taoLuc);
   }
   if (tim) {
     const tu = tim.split(/\s+/);
-    ds = (LOC.han ? ds : D.ds.filter(v => (!nam || v.nam === nam) && (!LOC.loai || v.loai === LOC.loai)))
-      .filter(v => { const s = boDau([v.soHieu, v.trichYeu, v.doiTac, v.nguoiKy, v.phuTrach, v.ghiChu, loaiCua(v.loai).ten, ngayVN(v.ngay), v.tep.map(t => t.ten).join(" ")].join(" ")); return tu.every(x => s.includes(x)); })
+    ds = (LOC.han ? ds : D.ds.filter(v => (!nam || v.nam === nam) && (!LOC.loai || v.loai === LOC.loai) && (!LOC.toi || cuaToi(v.emailTao))))
+      .filter(v => { const s = boDau([v.soHieu, v.trichYeu, v.doiTac, v.nguoiKy, v.phuTrach, v.ghiChu, v.nguoiTao, v.nguoiSua, loaiCua(v.loai).ten, ngayVN(v.ngay), v.tep.map(t => t.ten).join(" ")].join(" ")); return tu.every(x => s.includes(x)); })
       .sort((a, b) => b.ngay.localeCompare(a.ngay));
   }
   $("ds").innerHTML = ds.length ? ds.map(the).join("") : `<div class="trong">${D.ds.length ? "Không thấy văn bản nào khớp." : "Chưa có văn bản nào.<br>Bấm <b>＋ Lấy số mới</b> để bắt đầu."}</div>`;
   $("chan").innerHTML = `${THU ? "<b style='color:#b91c1c'>CHẾ ĐỘ THỬ – dữ liệu giả</b><br>" : ""}` +
     `Lưu trên Google Drive: <a href="${esc(D.khoUrl)}" target="_blank">mở Kho hồ sơ AMIKA</a><br>` +
     `Máy tính văn phòng sao lưu lần cuối: ${D.mayTinhSaoLuu ? esc(isNaN(Date.parse(D.mayTinhSaoLuu)) ? D.mayTinhSaoLuu : new Date(D.mayTinhSaoLuu).toLocaleString("vi-VN")) : "chưa có"}<br>` +
-    `<a href="#" onclick="LS.set('ma',null);LS.set('dl',null);location.reload();return false">Khoá lại</a>`;
+    (D.toi ? `Đang dùng: <b>${esc(D.toi.ten || D.toi.email)}</b>${D.toi.email ? " (" + esc(D.toi.email) + ")" : ""} · ` : "") +
+    `<a href="#" onclick="dangXuat();return false">Đăng xuất</a>`;
 }
-function chonLoai(m) { LOC.loai = LOC.loai === m ? "" : m; LOC.han = false; ve(); }
+function chonLoai(m) { LOC.loai = LOC.loai === m ? "" : m; LOC.han = false; if (!m) LOC.toi = false; ve(); }
 function boDau(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d"); }
 function the(v) {
   const huy = v.tinhTrang === "Đã huỷ";
@@ -180,7 +246,7 @@ function the(v) {
   return `<div class="the ${huy ? "daHuy" : ""}" onclick="xem('${v.id}')">
     <div><span class="so">${esc(v.soHieu)}</span> <span class="loai">· ${esc(loaiCua(v.loai).ten)} · ${ngayVN(v.ngay)}</span></div>${nhan}
     <div class="ty">${esc(v.trichYeu)}</div>
-    <div class="phu">${[v.doiTac, tien(v.soTien), v.tep.length ? "📎 " + v.tep.length + " tệp" : "⚠️ chưa có tệp"].filter(Boolean).map(esc).join(" · ")}</div></div>`;
+    <div class="phu">${[v.doiTac, tien(v.soTien), v.tep.length ? "📎 " + v.tep.length + " tệp" : "⚠️ chưa có tệp", v.nguoiTao && v.nguoiTao[0] !== "(" ? "👤 " + v.nguoiTao : ""].filter(Boolean).map(esc).join(" · ")}</div></div>`;
 }
 
 /* ---------- xem chi tiết ---------- */
@@ -200,14 +266,15 @@ function xem(id) {
       <div>Tình trạng</div><div>${esc(v.tinhTrang)}</div>
       ${v.ghiChu ? `<div>Ghi chú</div><div>${esc(v.ghiChu)}</div>` : ""}
     </div>
+    <div class="vet">🕓 Tạo bởi <b>${esc(v.nguoiTao || "chưa rõ")}</b>${gioVN(v.taoLuc) ? " lúc " + gioVN(v.taoLuc) : ""}${v.nguoiSua && v.suaLuc - v.taoLuc > 60000 ? `<br>✏️ Sửa lần cuối bởi <b>${esc(v.nguoiSua)}</b> lúc ${gioVN(v.suaLuc)}` : ""}</div>
     <div style="font-weight:600;margin-bottom:6px">Tệp đính kèm</div>
-    <div id="dsTep">${v.tep.length ? v.tep.map(t => `<div class="tep">📄 <a href="https://drive.google.com/file/d/${esc(t.id)}/view" target="_blank">${esc(t.ten)}</a><small>${t.kb >= 1024 ? (t.kb / 1024).toFixed(1) + " MB" : t.kb + " KB"}</small><button title="Bỏ tệp" onclick="boTep('${v.id}','${esc(t.id)}','${esc(t.ten).replace(/'/g, "")}')">🗑</button></div>`).join("") : `<div style="color:var(--mo);font-size:14px;margin-bottom:6px">Chưa có tệp — nên chụp/đính bản đã ký vào đây.</div>`}</div>
+    <div id="dsTep">${v.tep.length ? v.tep.map(t => `<div class="tep">📄 <a href="https://drive.google.com/file/d/${esc(t.id)}/view" target="_blank">${esc(t.ten)}</a><small>${t.kb >= 1024 ? (t.kb / 1024).toFixed(1) + " MB" : t.kb + " KB"}${t.nguoi ? "<br>" + esc(t.nguoi) : ""}</small>${laQT() || cuaToi(t.email) ? `<button title="Bỏ tệp" onclick="boTep('${v.id}','${esc(t.id)}','${esc(t.ten).replace(/'/g, "")}')">🗑</button>` : ""}</div>`).join("") : `<div style="color:var(--mo);font-size:14px;margin-bottom:6px">Chưa có tệp — nên chụp/đính bản đã ký vào đây.</div>`}</div>
     <label class="chonTep">📎 Thêm tệp (Word, PDF, ảnh chụp…)<input type="file" multiple hidden onchange="themTep('${v.id}',this.files)"></label>
     <div class="cacNut">
       <button class="nut" onclick="chepSo('${esc(v.soHieu)}')">📋 Chép số</button>
       <button class="nut" onclick="moSua('${v.id}')">✏️ Sửa</button>
       ${v.thuMucId && !THU ? `<a class="nut" style="text-decoration:none;color:inherit" target="_blank" href="https://drive.google.com/drive/folders/${esc(v.thuMucId)}">📂 Thư mục Drive</a>` : ""}
-      ${v.tinhTrang !== "Đã huỷ" ? `<button class="nut do" onclick="huy('${v.id}')">Huỷ số này</button>` : ""}
+      ${v.tinhTrang !== "Đã huỷ" && (laQT() || cuaToi(v.emailTao)) ? `<button class="nut do" onclick="huy('${v.id}')">Huỷ số này</button>` : ""}
     </div>`;
   $("lopXem").classList.add("mo");
 }
@@ -243,7 +310,7 @@ function themTep(id, files) { guiTep(id, [...files]).then(() => xem(id)).catch(e
 function moTao() { veForm(null); }
 function moSua(id) { dong("lopXem"); veForm(D.ds.find(x => x.id === id)); }
 function veForm(v) {
-  const moi = !v; v = v || { loai: LOC.loai || (D.loai.find(l => l.dangDung) || {}).ma, ngay: homNay(), nguoiKy: D.nguoiKy, tinhTrang: "Đã ký / ban hành", tep: [] };
+  const moi = !v; v = v || { loai: LOC.loai || (D.loai.find(l => l.dangDung) || {}).ma, ngay: homNay(), nguoiKy: D.nguoiKy, phuTrach: D.toi && D.toi.vaiTro !== "Quản trị" ? D.toi.ten : "", tinhTrang: "Đã ký / ban hành", tep: [] };
   $("hopForm").innerHTML = `<h2><span>${moi ? "Lấy số văn bản mới" : "Sửa " + esc(v.soHieu)}</span><button class="x" onclick="dong('lopForm')">×</button></h2>
     ${moi ? `<label class="dong"><span>Loại văn bản</span><select id="fLoai" onchange="doiLoai()">${D.loai.filter(l => l.dangDung).map(l => `<option value="${l.ma}" ${l.ma === v.loai ? "selected" : ""}>${esc(l.ten)}</option>`).join("")}</select></label>` : ""}
     <div class="hai"><label class="dong"><span>Ngày văn bản</span><input id="fNgay" type="date" value="${v.ngay}" onchange="doiLoai()"></label>
@@ -295,6 +362,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && MA
 
 /* ---------- chế độ thử trên máy (không có link máy chủ) ---------- */
 function giaLap(fn, args) {
+  if (fn !== "guiMaEmail" && fn !== "xacNhanMa") args = args.slice(1);
   const L = [["HDKT","Hợp đồng kinh tế","{so}/{nam}/HĐKT",1,1],["HDLD","Hợp đồng lao động","{so}/{nam}/HĐLĐ-AMIKA",0,1],["CVDI","Công văn đi","{so}/{nam}/CV-AMIKA",0,0],["CVDEN","Công văn đến","Đến {so}/{nam}",0,1],["GGT","Giấy giới thiệu","{so}/{nam}/GGT-AMIKA",0,1],["QD","Quyết định","{so}/{nam}/QĐ-AMIKA",0,0],["TB","Thông báo","{so}/{nam}/TB-AMIKA",0,0],["BB","Biên bản","{so}/{nam}/BB-AMIKA",0,0],["BG","Báo giá","{so}/{nam}/BG-AMIKA",1,1],["UV","Hồ sơ phỏng vấn / ứng viên","{so}/{nam}/UV",0,0],["KHAC","Giấy tờ khác","{so}/{nam}/VB-AMIKA",0,1]]
     .map(r => ({ ma: r[0], ten: r[1], mau: r[2], coTien: !!r[3], coHan: !!r[4], dangDung: true }));
   let db = LS.get("thu_db", null);
@@ -308,15 +376,19 @@ function giaLap(fn, args) {
   const luuDb = () => LS.set("thu_db", db);
   return new Promise((ok, hong) => setTimeout(() => {
     try {
-      if (fn === "taiDuLieu") { if (MA !== "123456") throw new Error("SAI_MA"); ok({ loai: L, ds: db, tinhTrang: ["Nháp","Đã ký / ban hành","Đã gửi","Đã nhận","Đang hiệu lực","Hết hiệu lực","Đã huỷ"], nguoiKy: "Trương Quốc Huy", nhacTruoc: 30, homNay: homNay(), mayTinhSaoLuu: "2026-11-17 12:00:03", khoUrl: "#" }); return; }
+      if (fn === "guiMaEmail") { if (!/@gmail.com$/.test(args[0])) throw new Error("Email này chưa được phép dùng phần mềm. Nhờ anh Huy thêm vào tab \"Nhân viên\"."); ok({ daGui: true, canTen: !LS.get("thu_ten", "") }); return; }
+      if (fn === "xacNhanMa") { if (args[1] !== "111111") throw new Error("Mã chưa đúng, kiểm tra lại email."); if (args[2]) LS.set("thu_ten", args[2]); LS.set("thu_email", args[0]); ok({ ve: "T.thu.thu" }); return; }
+      const toi = MA === "T.thu.thu" ? { email: LS.get("thu_email", ""), ten: LS.get("thu_ten", ""), vaiTro: "Nhân viên" } : { email: "truonghuyamika@gmail.com", ten: "Trương Quốc Huy", vaiTro: "Quản trị" };
+      if (MA !== "123456" && MA !== "T.thu.thu") throw new Error("SAI_MA");
+      if (fn === "taiDuLieu") { ok({ loai: L, ds: db, tinhTrang: ["Nháp","Đã ký / ban hành","Đã gửi","Đã nhận","Đang hiệu lực","Hết hiệu lực","Đã huỷ"], nguoiKy: "Trương Quốc Huy", nhacTruoc: 30, homNay: homNay(), mayTinhSaoLuu: "2026-11-17 12:00:03", khoUrl: "#", toi }); return; }
       if (fn === "luuVanBan") { const vb = args[0]; let v = vb.id ? db.find(x => x.id === vb.id) : null;
         if (!v) { const l = L.find(x => x.ma === vb.loai), nam = vb.ngay.slice(0, 4); const so = vb.soTuChon ? +vb.soTuChon : db.filter(x => x.nam === nam && x.loai === l.ma).reduce((m, x) => Math.max(m, x.so), 0) + 1;
           if (db.some(x => x.nam === nam && x.loai === l.ma && x.so === so)) throw new Error("Số đã dùng");
-          v = { id: "T" + Date.now(), nam, loai: l.ma, so, soHieu: l.mau.replace("{so}", String(so).padStart(2, "0")).replace("{nam}", nam), tep: [], taoLuc: Date.now() }; db.push(v); }
-        Object.assign(v, { ngay: vb.ngay, trichYeu: vb.trichYeu, doiTac: vb.doiTac, nguoiKy: vb.nguoiKy, phuTrach: vb.phuTrach, soTien: +String(vb.soTien || 0).replace(/\D/g, ""), hetHan: vb.hetHan, ghiChu: vb.ghiChu, tinhTrang: vb.tinhTrang, suaLuc: Date.now() });
+          v = { id: "T" + Date.now(), nam, loai: l.ma, so, soHieu: l.mau.replace("{so}", String(so).padStart(2, "0")).replace("{nam}", nam), tep: [], taoLuc: Date.now(), nguoiTao: toi.ten, emailTao: toi.email }; db.push(v); }
+        Object.assign(v, { ngay: vb.ngay, trichYeu: vb.trichYeu, doiTac: vb.doiTac, nguoiKy: vb.nguoiKy, phuTrach: vb.phuTrach, soTien: +String(vb.soTien || 0).replace(/\D/g, ""), hetHan: vb.hetHan, ghiChu: vb.ghiChu, tinhTrang: vb.tinhTrang, suaLuc: Date.now(), nguoiSua: toi.ten });
         luuDb(); ok(v); return; }
       if (fn === "huyVanBan") { const v = db.find(x => x.id === args[0]); v.tinhTrang = "Đã huỷ"; v.ghiChu += " | Huỷ: " + args[1]; luuDb(); ok(v); return; }
-      if (fn === "taiTepLen") { const v = db.find(x => x.id === args[0]); v.tep.push({ id: "t" + Date.now(), ten: args[1], kb: Math.ceil(args[3].length * .75 / 1024) }); luuDb(); ok(v); return; }
+      if (fn === "taiTepLen") { const v = db.find(x => x.id === args[0]); v.tep.push({ id: "t" + Date.now(), ten: args[1], kb: Math.ceil(args[3].length * .75 / 1024), nguoi: toi.ten, email: toi.email }); luuDb(); ok(v); return; }
       if (fn === "xoaTep") { const v = db.find(x => x.id === args[0]); v.tep = v.tep.filter(t => t.id !== args[1]); luuDb(); ok(v); return; }
       hong(new Error("không có " + fn));
     } catch (e) { hong(e); }
