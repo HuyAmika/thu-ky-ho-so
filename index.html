@@ -168,7 +168,7 @@ function ve() {
   $("ds").innerHTML = ds.length ? ds.map(the).join("") : `<div class="trong">${D.ds.length ? "Không thấy văn bản nào khớp." : "Chưa có văn bản nào.<br>Bấm <b>＋ Lấy số mới</b> để bắt đầu."}</div>`;
   $("chan").innerHTML = `${THU ? "<b style='color:#b91c1c'>CHẾ ĐỘ THỬ – dữ liệu giả</b><br>" : ""}` +
     `Lưu trên Google Drive: <a href="${esc(D.khoUrl)}" target="_blank">mở Kho hồ sơ AMIKA</a><br>` +
-    `Máy tính văn phòng sao lưu lần cuối: ${D.mayTinhSaoLuu ? esc(D.mayTinhSaoLuu) : "chưa có"}<br>` +
+    `Máy tính văn phòng sao lưu lần cuối: ${D.mayTinhSaoLuu ? esc(isNaN(Date.parse(D.mayTinhSaoLuu)) ? D.mayTinhSaoLuu : new Date(D.mayTinhSaoLuu).toLocaleString("vi-VN")) : "chưa có"}<br>` +
     `<a href="#" onclick="LS.set('ma',null);LS.set('dl',null);location.reload();return false">Khoá lại</a>`;
 }
 function chonLoai(m) { LOC.loai = LOC.loai === m ? "" : m; LOC.han = false; ve(); }
